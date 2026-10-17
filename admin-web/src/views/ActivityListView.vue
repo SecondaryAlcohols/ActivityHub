@@ -61,9 +61,10 @@ function formatDateTime(value: string) {
   return value.slice(0, 16).replace('T', ' ')
 }
 
-function signupPercent(row: ActivityListItem) {
-  if (!row.capacity) return 0
-  return Math.min(100, Math.round((row.taken_count / row.capacity) * 100))
+function signupPercent(row: unknown) {
+  const item = row as ActivityListItem
+  if (!item.capacity) return 0
+  return Math.min(100, Math.round((item.taken_count / item.capacity) * 100))
 }
 
 async function load() {
@@ -105,11 +106,12 @@ function handleSizeChange() {
   load()
 }
 
-async function runAction(action: ActionKey, row: ActivityListItem) {
+async function runAction(action: ActionKey, row: unknown) {
+  const item = row as ActivityListItem
   const tips =
     action === 'delete'
-      ? `删除后不可恢复，确定删除草稿活动「${row.title}」吗？`
-      : `确定要${actionLabels[action]}活动「${row.title}」吗？`
+      ? `删除后不可恢复，确定删除草稿活动「${item.title}」吗？`
+      : `确定要${actionLabels[action]}活动「${item.title}」吗？`
 
   try {
     await ElMessageBox.confirm(tips, '操作确认', {
@@ -122,7 +124,7 @@ async function runAction(action: ActionKey, row: ActivityListItem) {
   }
 
   try {
-    await actionMap[action](row.id)
+    await actionMap[action](item.id)
     ElMessage.success(`已${actionLabels[action]}`)
     await load()
   } catch {

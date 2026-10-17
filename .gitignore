@@ -28,3 +28,6 @@ scripts/downloads/
 
 # Local app settings
 .claude/settings.local.json
+
+# Database backups
+scripts/backups/

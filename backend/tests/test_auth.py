@@ -86,3 +86,34 @@ async def test_successful_login_resets_failure_counter(client):
         json={"username": "admin", "password": "secret123"},
     )
     assert blocked.status_code == 429
+
+
+async def test_staff_cannot_access_activity_management(client, session_factory):
+    from app.core.security import hash_password
+    from app.models.admin_user import AdminUser
+
+    async with session_factory() as session:
+        session.add(
+            AdminUser(
+                username="staff",
+                password_hash=hash_password("staff12345"),
+                display_name="核销员",
+                role="staff",
+                status=True,
+            )
+        )
+        await session.commit()
+
+    login = await client.post(
+        "/api/admin/auth/login",
+        json={"username": "staff", "password": "staff12345"},
+    )
+    assert login.status_code == 200
+    token = login.json()["data"]["access_token"]
+
+    response = await client.get(
+        "/api/admin/activities",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert response.status_code == 403
+    assert response.json()["code"] == 40300

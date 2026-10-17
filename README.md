@@ -85,7 +85,7 @@ cd backend
 .venv/Scripts/python.exe -m pytest -q
 ```
 
-当前覆盖：登录成功/失败、未登录拦截、登录失败限流与成功重置、活动创建与列表、关键词筛选、编辑、发布状态流转、删除限制、时间与表单校验、乐观锁、名额下限、已有报名后的表单/报名时间锁定、生产环境密钥校验，共 22 个用例。
+当前覆盖：登录成功/失败、未登录拦截、登录失败限流与成功重置、staff 角色越权拦截、活动创建与列表、关键词筛选、编辑、发布状态流转、删除限制、时间与表单校验、乐观锁、名额下限、已有报名后的表单/报名时间锁定、生产环境密钥校验，共 23 个用例。
 
 ## 当前已实现
 
@@ -101,7 +101,11 @@ cd backend
 - 关键操作写入 `audit_log`
 - 统一响应体与异常处理：`{ code, message, data }`
 - 响应式管理后台界面
+- 前端活动时间先后校验、未保存离开提示、报名字段上移/下移
+- Element Plus 按需引入，前端主包由约 869 KB 降至约 140 KB
+- Docker 部署：后端非 root 运行、服务健康检查、后端不直接暴露端口、Nginx 真实 IP 透传
 - GitHub Actions CI：后端迁移与测试、前端类型检查与构建
+- MySQL 备份脚本：`scripts/backup-mysql.cmd`
 
 ## 尚未实现（下一阶段）
 
@@ -143,10 +147,16 @@ cp .env.example .env
 访问 http://localhost:8080 。
 
 - Docker 守护进程按需启动，首次执行命令可能需要几秒钟
-- MySQL 数据保存在 `mysql_data` 数据卷
+- 后端容器以非 root 用户 `app` 运行，且不向宿主机暴露 8000 端口，只通过 Nginx 访问
+- MySQL、后端、管理后台均配置健康检查，管理后台在后端健康后启动
+- Uvicorn 信任 Nginx 代理头，审计日志与登录限流使用真实客户端 IP
+- MySQL 数据保存在 `mysql_data` 数据卷；`docker compose down` 不会删除数据卷
+- 构建默认使用清华 PyPI 与 npmmirror，可通过 `PIP_INDEX_URL`、`NPM_REGISTRY` 环境变量覆盖
 - 管理后台由 Nginx 提供，`/api` 反向代理到后端
 - 已配置 `docker.m.daocloud.io` 作为镜像加速；如失效，修改 WSL 内的 `/etc/docker/daemon.json`
 - 生产环境必须修改 `JWT_SECRET` 与数据库密码
+- 数据备份：执行 `.\scripts\backup-mysql.cmd`，SQL 文件写入 `scripts/backups/`
+- 停止服务：`.\scripts\docker.cmd compose down`（保留数据卷）
 - 如需 Docker Desktop 图形界面，需要自备离线安装包或可访问官方 CDN 的网络环境
 
 Docker 安装脚本位于 `scripts/install-docker-engine.ps1`，安装包缓存位于 `scripts/downloads/`（已加入 `.gitignore`，确认不再需要重装后可删除以释放约 350 MB 空间）。

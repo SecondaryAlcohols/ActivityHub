@@ -1,8 +1,10 @@
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
+import { onBeforeRouteLeave, useRoute, useRouter } from 'vue-router'
+import { ArrowDown, ArrowUp } from '@element-plus/icons-vue'
 import {
   ElMessage,
+  ElMessageBox,
   type FormInstance,
   type FormRules,
 } from 'element-plus'
@@ -65,23 +67,83 @@ const fieldTypes: { value: FieldType; label: string }[] = [
   { value: 'date', label: '日期' },
 ]
 
+const form = reactive<ActivityForm>(createForm())
+const fields = ref<FieldRow[]>(defaultFields())
+const initialSnapshot = ref('')
+let fieldCounter = 1
+
+function timeValue(value: string | null | undefined) {
+  if (!value) return null
+  const time = new Date(value).getTime()
+  return Number.isNaN(time) ? null : time
+}
+
 const rules: FormRules = {
   title: [{ required: true, message: '请输入活动标题', trigger: 'blur' }],
   location_name: [{ required: true, message: '请输入活动地点', trigger: 'blur' }],
   start_at: [{ required: true, message: '请选择活动开始时间', trigger: 'change' }],
-  end_at: [{ required: true, message: '请选择活动结束时间', trigger: 'change' }],
+  end_at: [
+    { required: true, message: '请选择活动结束时间', trigger: 'change' },
+    {
+      trigger: 'change',
+      validator: (_rule, value, callback) => {
+        const end = timeValue(value)
+        const start = timeValue(form.start_at)
+        if (end !== null && start !== null && end <= start) {
+          callback(new Error('活动结束时间必须晚于开始时间'))
+          return
+        }
+        callback()
+      },
+    },
+  ],
   signup_start_at: [
     { required: true, message: '请选择报名开始时间', trigger: 'change' },
   ],
   signup_end_at: [
     { required: true, message: '请选择报名截止时间', trigger: 'change' },
+    {
+      trigger: 'change',
+      validator: (_rule, value, callback) => {
+        const signupEnd = timeValue(value)
+        const signupStart = timeValue(form.signup_start_at)
+        const activityEnd = timeValue(form.end_at)
+        if (
+          signupEnd !== null &&
+          signupStart !== null &&
+          signupEnd <= signupStart
+        ) {
+          callback(new Error('报名截止时间必须晚于报名开始时间'))
+          return
+        }
+        if (
+          signupEnd !== null &&
+          activityEnd !== null &&
+          signupEnd > activityEnd
+        ) {
+          callback(new Error('报名截止时间不能晚于活动结束时间'))
+          return
+        }
+        callback()
+      },
+    },
+  ],
+  checkin_close_at: [
+    {
+      trigger: 'change',
+      validator: (_rule, value, callback) => {
+        const close = timeValue(value)
+        const open = timeValue(form.checkin_open_at)
+        if (close !== null && open !== null && close <= open) {
+          callback(new Error('签到关闭时间必须晚于签到开放时间'))
+          return
+        }
+        callback()
+      },
+    },
   ],
   capacity: [{ required: true, message: '请设置报名名额', trigger: 'change' }],
 }
-
-const form = reactive<ActivityForm>(createForm())
-const fields = ref<FieldRow[]>(defaultFields())
-let fieldCounter = 1
 
 function pad(value: number) {
   return String(value).padStart(2, '0')
@@ -185,6 +247,34 @@ function removeField(index: number) {
   fields.value.splice(index, 1)
 }
 
+function moveField(index: number, direction: -1 | 1) {
+  const target = index + direction
+  if (target < 0 || target >= fields.value.length) return
+  const list = [...fields.value]
+  const [row] = list.splice(index, 1)
+  if (!row) return
+  list.splice(target, 0, row)
+  fields.value = list
+}
+
+function snapshot() {
+  return JSON.stringify({
+    ...form,
+    fields: fields.value.map((row) => ({
+      key: row.key,
+      label: row.label,
+      type: row.type,
+      required: row.required,
+      optionsText: row.optionsText,
+      system: Boolean(row.system),
+    })),
+  })
+}
+
+function isDirty() {
+  return Boolean(initialSnapshot.value) && snapshot() !== initialSnapshot.value
+}
+
 function validateFields(): string | null {
   const keys = new Set<string>()
   for (const row of fields.value) {
@@ -269,6 +359,7 @@ function fillForm(data: Activity) {
   }))
   activityVersion.value = data.version
   activityStatus.value = data.status
+  initialSnapshot.value = snapshot()
 }
 
 async function handleSubmit() {
@@ -298,6 +389,7 @@ async function handleSubmit() {
       await createActivity(payload)
       ElMessage.success('活动已创建，可在列表中发布')
     }
+    initialSnapshot.value = snapshot()
     await router.push('/activities')
   } catch {
     // 请求错误已统一提示
@@ -305,6 +397,40 @@ async function handleSubmit() {
     submitting.value = false
   }
 }
+
+onBeforeRouteLeave(async () => {
+  if (readonly.value || !isDirty()) return true
+  try {
+    await ElMessageBox.confirm(
+      '当前修改尚未保存，确定离开吗？',
+      '未保存的修改',
+      {
+        confirmButtonText: '离开',
+        cancelButtonText: '继续编辑',
+        type: 'warning',
+      },
+    )
+    return true
+  } catch {
+    return false
+  }
+})
+
+function handleBeforeUnload(event: BeforeUnloadEvent) {
+  if (!isDirty()) return
+  event.preventDefault()
+  event.returnValue = ''
+}
+
+onMounted(() => {
+  window.addEventListener('beforeunload', handleBeforeUnload)
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('beforeunload', handleBeforeUnload)
+})
+
+initialSnapshot.value = snapshot()
 
 onMounted(async () => {
   if (!isEdit.value) return
@@ -639,8 +765,26 @@ onMounted(async () => {
             </template>
           </el-table-column>
 
-          <el-table-column label="操作" width="80" align="center">
+          <el-table-column label="操作" width="160" align="center">
             <template #default="{ row, $index }">
+              <el-button
+                link
+                :disabled="readonly || $index === 0"
+                title="上移"
+                aria-label="上移"
+                @click="moveField($index, -1)"
+              >
+                <el-icon><ArrowUp /></el-icon>
+              </el-button>
+              <el-button
+                link
+                :disabled="readonly || $index === fields.length - 1"
+                title="下移"
+                aria-label="下移"
+                @click="moveField($index, 1)"
+              >
+                <el-icon><ArrowDown /></el-icon>
+              </el-button>
               <el-button
                 link
                 type="danger"
