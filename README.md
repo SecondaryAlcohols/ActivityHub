@@ -85,18 +85,23 @@ cd backend
 .venv/Scripts/python.exe -m pytest -q
 ```
 
-当前覆盖：登录成功/失败、未登录拦截、活动创建与列表、关键词筛选、编辑、发布状态流转、删除限制、时间与表单校验，共 11 个用例。
+当前覆盖：登录成功/失败、未登录拦截、登录失败限流与成功重置、活动创建与列表、关键词筛选、编辑、发布状态流转、删除限制、时间与表单校验、乐观锁、名额下限、已有报名后的表单/报名时间锁定、生产环境密钥校验，共 22 个用例。
 
 ## 当前已实现
 
 - 管理员账号密码登录、JWT 鉴权、角色校验
+- 登录失败限流：同一 IP + 账号连续失败 5 次后锁定 15 分钟，成功登录后重置
 - 活动创建、编辑、列表、关键词/状态筛选、分页
 - 活动发布、下架、结束状态流转；仅草稿可删除
+- 活动编辑乐观锁：使用 `version` 防止多管理员互相覆盖
+- 已有报名后锁定报名表单结构与报名时间；名额不能低于已报名人数
+- 生产环境启动时强制校验 `JWT_SECRET`，拒绝默认值或少于 32 位的密钥
 - 报名表单动态配置：系统字段（姓名、手机号）+ 自定义字段（文本、多行、手机号、邮箱、数字、单选、多选、日期）
 - 后端按表单 Schema 校验必填字段、字段标识唯一性、系统字段存在性
 - 关键操作写入 `audit_log`
 - 统一响应体与异常处理：`{ code, message, data }`
 - 响应式管理后台界面
+- GitHub Actions CI：后端迁移与测试、前端类型检查与构建
 
 ## 尚未实现（下一阶段）
 
@@ -127,10 +132,13 @@ Windows 侧没有全局 `docker` 命令，请使用项目提供的包装器 `scr
 ```bash
 cp .env.example .env
 # 修改 .env 中的 MYSQL_ROOT_PASSWORD、MYSQL_PASSWORD、JWT_SECRET
+# JWT_SECRET 至少 32 位，可用 openssl rand -hex 32 生成
 
 .\scripts\docker.cmd compose up -d --build
 .\scripts\docker.cmd compose exec backend python scripts/create_admin.py --username admin --password 你的强密码 --name 系统管理员
 ```
+
+> 后端以 `ENVIRONMENT=production` 运行，如果 `JWT_SECRET` 为空、使用默认值或少于 32 位，会拒绝启动；MySQL 密码也请务必修改。
 
 访问 http://localhost:8080 。
 

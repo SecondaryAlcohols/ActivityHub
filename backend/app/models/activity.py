@@ -38,6 +38,9 @@ class Activity(Base, TimestampMixin):
     status: Mapped[str] = mapped_column(
         String(20), nullable=False, default="draft", server_default="draft"
     )
+    version: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=1, server_default="1"
+    )
     created_by: Mapped[int] = mapped_column(
         BigIntType, ForeignKey("admin_user.id"), nullable=False
     )

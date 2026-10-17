@@ -28,6 +28,8 @@ services:
   backend:
     build: ./backend
     environment:
+      ENVIRONMENT: production
+      DEBUG: "false"
       DATABASE_URL: mysql+aiomysql://event:${MYSQL_PASSWORD:-eventpass}@mysql:3306/event_system?charset=utf8mb4
       JWT_SECRET: ${JWT_SECRET:-change-me-in-production}
       ACCESS_TOKEN_EXPIRE_MINUTES: 480

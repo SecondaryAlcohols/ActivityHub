@@ -1,24 +1,33 @@
 from datetime import datetime, timedelta
 
+import pytest
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
+from app.core.rate_limit import reset_all_attempts
 from app.core.security import hash_password
 from app.db import get_db
 from app.main import create_app
 from app.models import AdminUser, Base
 
 
+@pytest.fixture(autouse=True)
+def reset_login_limiter():
+    reset_all_attempts()
+    yield
+    reset_all_attempts()
+
+
 @pytest_asyncio.fixture
-async def client(tmp_path):
+async def session_factory(tmp_path):
     db_path = tmp_path / "test.db"
     engine = create_async_engine(f"sqlite+aiosqlite:///{db_path.as_posix()}")
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
 
-    session_factory = async_sessionmaker(engine, expire_on_commit=False)
-    async with session_factory() as session:
+    factory = async_sessionmaker(engine, expire_on_commit=False)
+    async with factory() as session:
         session.add(
             AdminUser(
                 username="admin",
@@ -30,6 +39,12 @@ async def client(tmp_path):
         )
         await session.commit()
 
+    yield factory
+    await engine.dispose()
+
+
+@pytest_asyncio.fixture
+async def client(session_factory):
     app = create_app()
 
     async def override_get_db():
@@ -41,8 +56,6 @@ async def client(tmp_path):
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as test_client:
         yield test_client
-
-    await engine.dispose()
 
 
 @pytest_asyncio.fixture

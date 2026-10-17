@@ -5,6 +5,7 @@ backend/__pycache__/
 *.pyc
 backend/event_system.db
 backend/.env
+/.env
 
 # Node
 admin-web/node_modules/

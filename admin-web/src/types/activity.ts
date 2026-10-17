@@ -43,11 +43,16 @@ export interface ActivityPayload {
 export interface Activity extends ActivityPayload {
   id: number
   status: ActivityStatus
+  version: number
   taken_count: number
   created_by: number
   published_at: string | null
   created_at: string
   updated_at: string
+}
+
+export interface ActivityUpdatePayload extends ActivityPayload {
+  version: number
 }
 
 export interface ActivityListItem {

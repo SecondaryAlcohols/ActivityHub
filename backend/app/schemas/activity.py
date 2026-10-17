@@ -105,7 +105,7 @@ class ActivityCreate(ActivityBase):
 
 
 class ActivityUpdate(ActivityBase):
-    pass
+    version: int = Field(ge=1)
 
 
 class ActivityOut(ActivityBase):
@@ -113,6 +113,7 @@ class ActivityOut(ActivityBase):
 
     id: int
     status: ActivityStatus
+    version: int
     taken_count: int
     created_by: int
     published_at: datetime | None

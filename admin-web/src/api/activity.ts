@@ -1,6 +1,11 @@
 import { del, get, post, put } from './http'
 
-import type { Activity, ActivityListItem, ActivityPayload } from '@/types/activity'
+import type {
+  Activity,
+  ActivityListItem,
+  ActivityPayload,
+  ActivityUpdatePayload,
+} from '@/types/activity'
 import type { Page } from '@/types/api'
 
 export interface ActivityQuery {
@@ -22,7 +27,7 @@ export function createActivity(payload: ActivityPayload) {
   return post<Activity>('/admin/activities', payload)
 }
 
-export function updateActivity(id: number, payload: ActivityPayload) {
+export function updateActivity(id: number, payload: ActivityUpdatePayload) {
   return put<Activity>(`/admin/activities/${id}`, payload)
 }
 

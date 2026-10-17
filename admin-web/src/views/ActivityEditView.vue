@@ -48,6 +48,7 @@ const isEdit = computed(() => route.name === 'activity-edit')
 const formRef = ref<FormInstance>()
 const pageLoading = ref(false)
 const submitting = ref(false)
+const activityVersion = ref<number | null>(null)
 const activityStatus = ref<ActivityStatus | null>(null)
 const readonly = computed(
   () => activityStatus.value === 'closed' || activityStatus.value === 'finished',
@@ -266,6 +267,7 @@ function fillForm(data: Activity) {
     ...field,
     optionsText: (field.options ?? []).join('，'),
   }))
+  activityVersion.value = data.version
   activityStatus.value = data.status
 }
 
@@ -285,7 +287,12 @@ async function handleSubmit() {
   try {
     const payload = buildPayload()
     if (isEdit.value) {
-      await updateActivity(Number(route.params.id), payload)
+      const version = activityVersion.value
+      if (version === null) {
+        ElMessage.error('活动数据尚未加载完成，请刷新后重试')
+        return
+      }
+      await updateActivity(Number(route.params.id), { ...payload, version })
       ElMessage.success('活动已保存')
     } else {
       await createActivity(payload)
