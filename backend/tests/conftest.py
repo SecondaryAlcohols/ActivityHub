@@ -1,0 +1,91 @@
+from datetime import datetime, timedelta
+
+import pytest_asyncio
+from httpx import ASGITransport, AsyncClient
+from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
+
+from app.core.security import hash_password
+from app.db import get_db
+from app.main import create_app
+from app.models import AdminUser, Base
+
+
+@pytest_asyncio.fixture
+async def client(tmp_path):
+    db_path = tmp_path / "test.db"
+    engine = create_async_engine(f"sqlite+aiosqlite:///{db_path.as_posix()}")
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+
+    session_factory = async_sessionmaker(engine, expire_on_commit=False)
+    async with session_factory() as session:
+        session.add(
+            AdminUser(
+                username="admin",
+                password_hash=hash_password("secret123"),
+                display_name="管理员",
+                role="super_admin",
+                status=True,
+            )
+        )
+        await session.commit()
+
+    app = create_app()
+
+    async def override_get_db():
+        async with session_factory() as session:
+            yield session
+
+    app.dependency_overrides[get_db] = override_get_db
+
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as test_client:
+        yield test_client
+
+    await engine.dispose()
+
+
+@pytest_asyncio.fixture
+async def auth_headers(client):
+    response = await client.post(
+        "/api/admin/auth/login",
+        json={"username": "admin", "password": "secret123"},
+    )
+    assert response.status_code == 200
+    token = response.json()["data"]["access_token"]
+    return {"Authorization": f"Bearer {token}"}
+
+
+def activity_payload(**overrides):
+    now = datetime.now()
+    payload = {
+        "title": "技术分享会",
+        "summary": "一次内部技术交流",
+        "location_name": "报告厅",
+        "address": "一号楼 3 层",
+        "start_at": (now + timedelta(days=7)).isoformat(),
+        "end_at": (now + timedelta(days=7, hours=2)).isoformat(),
+        "signup_start_at": (now - timedelta(days=1)).isoformat(),
+        "signup_end_at": (now + timedelta(days=6)).isoformat(),
+        "capacity": 100,
+        "need_review": False,
+        "allow_cancel": True,
+        "form_schema": [
+            {
+                "key": "name",
+                "label": "姓名",
+                "type": "text",
+                "required": True,
+                "system": True,
+            },
+            {
+                "key": "phone",
+                "label": "手机号",
+                "type": "phone",
+                "required": True,
+                "system": True,
+            },
+        ],
+    }
+    payload.update(overrides)
+    return payload

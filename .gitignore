@@ -1,0 +1,29 @@
+# Python
+backend/.venv/
+backend/__pycache__/
+**/__pycache__/
+*.pyc
+backend/event_system.db
+backend/.env
+
+# Node
+admin-web/node_modules/
+admin-web/dist/
+admin-web/.env.local
+
+# Editor / OS
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# Test caches
+.pytest_cache/
+
+# Local Docker install artifacts
+scripts/*.log
+scripts/*-ready.txt
+scripts/downloads/
+
+# Local app settings
+.claude/settings.local.json

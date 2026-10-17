@@ -1,0 +1,6 @@
+.venv
+__pycache__
+*.pyc
+event_system.db
+.env
+tests

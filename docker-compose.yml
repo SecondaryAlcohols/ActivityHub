@@ -1,0 +1,51 @@
+services:
+  mysql:
+    image: mysql:8.4
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-rootpass}
+      MYSQL_DATABASE: event_system
+      MYSQL_USER: event
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-eventpass}
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "mysqladmin",
+          "ping",
+          "-h",
+          "localhost",
+          "-uroot",
+          "-p${MYSQL_ROOT_PASSWORD:-rootpass}",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    restart: unless-stopped
+
+  backend:
+    build: ./backend
+    environment:
+      DATABASE_URL: mysql+aiomysql://event:${MYSQL_PASSWORD:-eventpass}@mysql:3306/event_system?charset=utf8mb4
+      JWT_SECRET: ${JWT_SECRET:-change-me-in-production}
+      ACCESS_TOKEN_EXPIRE_MINUTES: 480
+      CORS_ORIGINS: '["http://localhost:8080"]'
+    depends_on:
+      mysql:
+        condition: service_healthy
+    ports:
+      - "8000:8000"
+    restart: unless-stopped
+
+  admin-web:
+    build: ./admin-web
+    depends_on:
+      - backend
+    ports:
+      - "8080:80"
+    restart: unless-stopped
+
+volumes:
+  mysql_data:
