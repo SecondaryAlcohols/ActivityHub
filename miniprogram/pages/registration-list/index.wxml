@@ -1,0 +1,47 @@
+<view class="page">
+  <view class="header">
+    <view class="header-title">我的报名</view>
+    <view class="header-desc">查看报名状态与电子票</view>
+  </view>
+
+  <scroll-view class="tabs" scroll-x enable-flex>
+    <view
+      wx:for="{{tabs}}"
+      wx:key="key"
+      class="tab {{activeStatus === item.key ? 'active' : ''}}"
+      data-key="{{item.key}}"
+      bindtap="switchTab"
+    >
+      {{item.label}}
+    </view>
+  </scroll-view>
+
+  <view class="list">
+    <view
+      wx:for="{{items}}"
+      wx:key="id"
+      class="registration-card"
+      data-id="{{item.id}}"
+      bindtap="openDetail"
+    >
+      <view class="card-top">
+        <text class="title">{{item.activity.title}}</text>
+        <text class="tag {{item.statusClass}}">{{item.statusLabel}}</text>
+      </view>
+      <view class="meta">{{item.startText}} 至 {{item.endText}}</view>
+      <view class="meta">{{item.activity.location_name}}</view>
+      <view class="divider"></view>
+      <view class="card-bottom">
+        <text class="applicant">{{item.applicant_name}} · {{item.applicant_phone}}</text>
+        <text class="link">查看详情 ›</text>
+      </view>
+    </view>
+
+    <view wx:if="{{loading}}" class="page-loading">加载中…</view>
+    <view wx:elif="{{!items.length}}" class="empty">
+      <view>还没有报名记录</view>
+      <view class="empty-hint">去首页看看有没有感兴趣的活动</view>
+    </view>
+    <view wx:elif="{{!hasMore}}" class="list-end">共 {{total}} 条报名</view>
+  </view>
+</view>

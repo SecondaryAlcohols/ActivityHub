@@ -1,0 +1,48 @@
+<view class="mine-page">
+  <view class="profile-card">
+    <image
+      wx:if="{{attendee.avatar_url}}"
+      class="avatar"
+      src="{{attendee.avatar_url}}"
+      mode="aspectFill"
+    />
+    <view wx:else class="avatar avatar-placeholder">{{initial}}</view>
+    <view class="profile-info">
+      <view class="profile-name">{{attendee.nickname || '微信用户'}}</view>
+      <view class="profile-phone">{{attendee.phone || '报名后可补充手机号'}}</view>
+    </view>
+  </view>
+
+  <view class="section">
+    <view class="section-title">修改昵称</view>
+    <view class="nickname-row">
+      <input
+        class="nickname-input"
+        value="{{nickname}}"
+        placeholder="请输入昵称"
+        maxlength="64"
+        bindinput="onNicknameInput"
+      />
+      <button
+        class="save-btn"
+        loading="{{saving}}"
+        disabled="{{saving}}"
+        bindtap="saveNickname"
+      >
+        保存
+      </button>
+    </view>
+  </view>
+
+  <view class="menu" bindtap="openRegistrations">
+    <view>
+      <view class="menu-title">我的报名</view>
+      <view class="menu-desc">查看报名状态、取消报名、出示电子票</view>
+    </view>
+    <text class="menu-arrow">›</text>
+  </view>
+
+  <view wx:if="{{isMock}}" class="dev-note">
+    当前为开发环境 Mock 登录，用户标识：{{mockUser}}。接入正式 AppID 后请关闭 Mock 登录。
+  </view>
+</view>

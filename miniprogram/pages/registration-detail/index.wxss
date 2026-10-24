@@ -1,0 +1,173 @@
+.detail-page {
+  min-height: 100vh;
+  padding: 24rpx 24rpx 60rpx;
+}
+
+.status-card {
+  padding: 28rpx;
+  background: #fff;
+  border-radius: 22rpx;
+  box-shadow: 0 10rpx 34rpx rgba(31, 41, 55, 0.06);
+}
+
+.status-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20rpx;
+}
+
+.status-name {
+  font-size: 36rpx;
+  font-weight: 600;
+}
+
+.status-phone {
+  margin-top: 8rpx;
+  font-size: 25rpx;
+  color: #6b7280;
+}
+
+.status-meta {
+  margin-top: 18rpx;
+  font-size: 23rpx;
+  color: #9ca3af;
+}
+
+.status-notice {
+  margin-top: 20rpx;
+  padding: 18rpx 20rpx;
+  border-radius: 12rpx;
+  background: #fff8ec;
+  color: #b45309;
+  font-size: 24rpx;
+  line-height: 1.6;
+}
+
+.status-notice.danger {
+  background: #fff0f0;
+  color: #b91c1c;
+}
+
+.ticket-card {
+  margin-top: 22rpx;
+  padding: 30rpx 26rpx;
+  text-align: center;
+  background: #fff;
+  border-radius: 22rpx;
+  box-shadow: 0 10rpx 34rpx rgba(31, 41, 55, 0.06);
+}
+
+.ticket-title {
+  font-size: 30rpx;
+  font-weight: 600;
+}
+
+.qr {
+  width: 360rpx;
+  height: 360rpx;
+  margin: 18rpx auto 10rpx;
+  display: block;
+}
+
+.ticket-tip {
+  font-size: 23rpx;
+  color: #9ca3af;
+}
+
+.ticket-info {
+  margin-top: 22rpx;
+  padding-top: 22rpx;
+  border-top: 1rpx dashed #e5e7eb;
+}
+
+.ticket-activity {
+  font-size: 28rpx;
+  font-weight: 600;
+}
+
+.ticket-meta {
+  margin-top: 8rpx;
+  font-size: 23rpx;
+  color: #6b7280;
+}
+
+.section {
+  margin-top: 22rpx;
+  padding: 26rpx;
+  background: #fff;
+  border-radius: 20rpx;
+  box-shadow: 0 8rpx 30rpx rgba(31, 41, 55, 0.05);
+}
+
+.section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.section-title {
+  font-size: 28rpx;
+  font-weight: 600;
+}
+
+.link {
+  font-size: 24rpx;
+  color: #3b5bdb;
+}
+
+.activity-title {
+  margin-top: 18rpx;
+  font-size: 30rpx;
+  font-weight: 600;
+}
+
+.activity-meta {
+  margin-top: 8rpx;
+  font-size: 24rpx;
+  color: #6b7280;
+}
+
+.answer-list {
+  margin-top: 10rpx;
+}
+
+.answer-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24rpx;
+  padding: 18rpx 0;
+  border-bottom: 1rpx solid #f0f2f6;
+}
+
+.answer-row:last-child {
+  border-bottom: none;
+}
+
+.answer-label {
+  width: 160rpx;
+  flex-shrink: 0;
+  font-size: 24rpx;
+  color: #8b93a3;
+}
+
+.answer-value {
+  flex: 1;
+  text-align: right;
+  font-size: 25rpx;
+  line-height: 1.6;
+}
+
+.actions {
+  margin-top: 30rpx;
+}
+
+.action-btn {
+  margin-bottom: 16rpx;
+}
+
+.action-btn.danger {
+  border-color: #f3c7c7;
+  color: #b91c1c;
+}

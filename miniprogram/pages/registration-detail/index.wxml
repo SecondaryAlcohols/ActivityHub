@@ -1,0 +1,72 @@
+<view wx:if="{{loading && !detail}}" class="page-loading">加载中…</view>
+
+<view wx:elif="{{detail}}" class="detail-page">
+  <view class="status-card">
+    <view class="status-top">
+      <view>
+        <view class="status-name">{{detail.applicant_name}}</view>
+        <view class="status-phone">{{detail.applicant_phone}}</view>
+      </view>
+      <text class="tag {{statusClass}}">{{statusLabel}}</text>
+    </view>
+    <view class="status-meta">报名编号 #{{detail.id}} · {{detail.createdText}}</view>
+
+    <view wx:if="{{detail.status === 'pending'}}" class="status-notice">
+      报名已提交，管理员审核通过后即可查看电子票。
+    </view>
+    <view wx:if="{{detail.status === 'rejected'}}" class="status-notice danger">
+      报名未通过审核<text wx:if="{{detail.review_note}}">：{{detail.review_note}}</text>
+    </view>
+    <view wx:if="{{detail.status === 'cancelled'}}" class="status-notice">
+      该报名已取消，名额已释放。
+    </view>
+  </view>
+
+  <view wx:if="{{detail.status === 'approved' && ticket}}" class="ticket-card">
+    <view class="ticket-title">电子票</view>
+    <image class="qr" src="{{qrUrl}}" mode="aspectFit" show-menu-by-longpress />
+    <view class="ticket-tip">入场时请出示此二维码</view>
+    <view class="ticket-info">
+      <view class="ticket-activity">{{ticket.activity_title}}</view>
+      <view class="ticket-meta">{{ticket.location_name}}</view>
+      <view class="ticket-meta">{{ticket.startText}} 至 {{ticket.endText}}</view>
+    </view>
+  </view>
+
+  <view class="section" bindtap="openActivity">
+    <view class="section-head">
+      <view class="section-title">活动信息</view>
+      <text class="link">查看活动 ›</text>
+    </view>
+    <view class="activity-title">{{detail.activity.title}}</view>
+    <view class="activity-meta">{{detail.activity.location_name}}</view>
+    <view class="activity-meta">{{detail.activity.startText}} 至 {{detail.activity.endText}}</view>
+  </view>
+
+  <view class="section">
+    <view class="section-title">报名信息</view>
+    <view class="answer-list">
+      <view wx:for="{{answerRows}}" wx:key="key" class="answer-row">
+        <text class="answer-label">{{item.label}}</text>
+        <text class="answer-value">{{item.value}}</text>
+      </view>
+    </view>
+  </view>
+
+  <view class="actions">
+    <button
+      wx:if="{{canCancel}}"
+      class="ghost-btn action-btn danger"
+      loading="{{cancelling}}"
+      disabled="{{cancelling}}"
+      bindtap="cancel"
+    >
+      取消报名
+    </button>
+    <button class="primary-btn action-btn" bindtap="openActivity">
+      查看活动
+    </button>
+  </view>
+</view>
+
+<view wx:else class="page-loading">报名记录不存在</view>

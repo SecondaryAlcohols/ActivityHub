@@ -1,0 +1,16 @@
+{
+  "description": "活动报名与签到小程序",
+  "compileType": "miniprogram",
+  "miniprogramRoot": "./",
+  "appid": "touristappid",
+  "projectname": "event-signup",
+  "setting": {
+    "urlCheck": false,
+    "es6": true,
+    "enhance": true,
+    "postcss": true,
+    "minified": true
+  },
+  "libVersion": "3.4.9",
+  "condition": {}
+}

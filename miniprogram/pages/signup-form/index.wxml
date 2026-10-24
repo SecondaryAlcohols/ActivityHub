@@ -1,0 +1,95 @@
+<view wx:if="{{loading}}" class="page-loading">加载中…</view>
+
+<view wx:elif="{{activity}}" class="form-page">
+  <view class="form-header">
+    <view class="form-title">填写报名信息</view>
+    <view class="form-sub">{{activity.title}}</view>
+    <view class="form-meta">
+      剩余 {{activity.remaining}} 个名额
+      <text class="dot"></text>
+      {{activity.need_review ? '提交后需管理员审核' : '提交后自动通过'}}
+    </view>
+  </view>
+
+  <view class="form-card">
+    <view wx:for="{{fields}}" wx:key="key" class="field">
+      <view class="field-label">
+        {{item.label}}
+        <text wx:if="{{item.required}}" class="required">*</text>
+      </view>
+
+      <textarea
+        wx:if="{{item.type === 'textarea'}}"
+        class="input textarea"
+        value="{{item.value}}"
+        placeholder="{{item.placeholder || '请输入'}}"
+        maxlength="2000"
+        data-index="{{index}}"
+        bindinput="onInput"
+      />
+
+      <picker
+        wx:elif="{{item.type === 'select'}}"
+        mode="selector"
+        range="{{item.options}}"
+        value="{{item.selectedIndex}}"
+        data-index="{{index}}"
+        bindchange="onPickerChange"
+      >
+        <view class="input picker {{item.value ? '' : 'placeholder'}}">
+          {{item.value || '请选择'}}
+        </view>
+      </picker>
+
+      <view wx:elif="{{item.type === 'multi_select'}}" class="choice-row">
+        <view
+          wx:for="{{item.choices}}"
+          wx:for-item="choice"
+          wx:for-index="choiceIndex"
+          wx:key="label"
+          class="choice {{choice.selected ? 'selected' : ''}}"
+          data-index="{{index}}"
+          data-choice-index="{{choiceIndex}}"
+          bindtap="toggleMulti"
+        >
+          {{choice.label}}
+        </view>
+      </view>
+
+      <picker
+        wx:elif="{{item.type === 'date'}}"
+        mode="date"
+        value="{{item.value}}"
+        data-index="{{index}}"
+        bindchange="onDateChange"
+      >
+        <view class="input picker {{item.value ? '' : 'placeholder'}}">
+          {{item.value || '请选择日期'}}
+        </view>
+      </picker>
+
+      <input
+        wx:else
+        class="input"
+        type="{{item.type === 'number' || item.type === 'phone' ? 'number' : 'text'}}"
+        value="{{item.value}}"
+        placeholder="{{item.placeholder || '请输入'}}"
+        maxlength="200"
+        data-index="{{index}}"
+        bindinput="onInput"
+      />
+    </view>
+  </view>
+
+  <view class="form-footer">
+    <button
+      class="primary-btn"
+      loading="{{submitting}}"
+      disabled="{{submitting}}"
+      bindtap="submit"
+    >
+      提交报名
+    </button>
+    <view class="footer-tip">提交即表示同意活动主办方收集并使用以上信息</view>
+  </view>
+</view>

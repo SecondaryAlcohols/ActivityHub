@@ -1,0 +1,73 @@
+<view wx:if="{{loading && !activity}}" class="page-loading">加载中…</view>
+
+<view wx:elif="{{activity}}" class="detail-page">
+  <image
+    wx:if="{{activity.cover_url}}"
+    class="cover"
+    src="{{activity.cover_url}}"
+    mode="aspectFill"
+  />
+  <view wx:else class="cover cover-placeholder">
+    <text class="cover-text">EVENT</text>
+  </view>
+
+  <view class="content">
+    <view class="title-row">
+      <text class="title">{{activity.title}}</text>
+      <text wx:if="{{activity.need_review}}" class="tag tag-warn">需审核</text>
+    </view>
+    <view wx:if="{{activity.summary}}" class="summary">{{activity.summary}}</view>
+
+    <view class="info-card">
+      <view class="info-row">
+        <text class="info-label">活动时间</text>
+        <text class="info-value">{{activity.startText}} 至 {{activity.endText}}</text>
+      </view>
+      <view class="info-row">
+        <text class="info-label">活动地点</text>
+        <text class="info-value">{{activity.location_name}}</text>
+      </view>
+      <view wx:if="{{activity.address}}" class="info-row">
+        <text class="info-label">详细地址</text>
+        <text class="info-value">{{activity.address}}</text>
+      </view>
+      <view class="info-row">
+        <text class="info-label">报名时间</text>
+        <text class="info-value">{{activity.signupText}}</text>
+      </view>
+      <view class="info-row">
+        <text class="info-label">剩余名额</text>
+        <text class="info-value primary">{{activity.remaining}} / {{activity.capacity}}</text>
+      </view>
+    </view>
+
+    <view wx:if="{{activity.description}}" class="section">
+      <view class="section-title">活动详情</view>
+      <text class="description">{{activity.description}}</text>
+    </view>
+
+    <view wx:if="{{activity.need_review}}" class="notice">
+      本活动需要管理员审核，提交报名后请留意报名状态。
+    </view>
+
+    <view class="link-row" bindtap="openMyRegistrations">
+      <text>查看我的全部报名</text>
+      <text class="link-arrow">›</text>
+    </view>
+  </view>
+
+  <view class="footer">
+    <view class="footer-meta">
+      <text class="footer-remaining">余 {{activity.remaining}} 个名额</text>
+      <text wx:if="{{activity.reasonText && !activity.signup_state.can_signup}}" class="footer-reason">{{activity.reasonText}}</text>
+    </view>
+    <button
+      class="footer-btn {{activity.signup_state.can_signup || (activity.my_registration && (activity.my_registration.status === 'pending' || activity.my_registration.status === 'approved')) ? '' : 'disabled'}}"
+      bindtap="handleAction"
+    >
+      {{actionText}}
+    </button>
+  </view>
+</view>
+
+<view wx:else class="page-loading">活动不存在或已下架</view>

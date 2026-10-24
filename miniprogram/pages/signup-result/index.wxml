@@ -1,0 +1,23 @@
+<view class="result-page">
+  <view class="result-card">
+    <view class="result-icon {{isPending ? 'pending' : 'success'}}">
+      {{isPending ? '待' : '✓'}}
+    </view>
+    <view class="result-title">
+      {{isPending ? '报名已提交' : '报名成功'}}
+    </view>
+    <view class="result-desc">
+      {{isPending ? '管理员审核通过后，即可在报名详情中查看电子票。' : '已为你保留名额，请按时参加活动。'}}
+    </view>
+    <view class="result-id">报名编号 #{{id}}</view>
+
+    <button class="primary-btn result-btn" bindtap="openDetail">
+      查看报名详情
+    </button>
+    <button class="ghost-btn result-btn" bindtap="openList">
+      我的报名
+    </button>
+  </view>
+
+  <view class="back-link" bindtap="back">返回活动详情</view>
+</view>
