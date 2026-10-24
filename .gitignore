@@ -20,6 +20,7 @@ Thumbs.db
 
 # Test caches
 .pytest_cache/
+.pytest-tmp/
 
 # Local Docker install artifacts
 scripts/*.log
