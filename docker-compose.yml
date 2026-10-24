@@ -43,6 +43,7 @@ services:
       WECHAT_APPID: ${WECHAT_APPID:-}
       WECHAT_SECRET: ${WECHAT_SECRET:-}
       WECHAT_MOCK_LOGIN: "false"
+      WEB_DEMO_LOGIN: ${WEB_DEMO_LOGIN:-true}
       CORS_ORIGINS: '["http://localhost:8080"]'
     command: sh -c "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000 --proxy-headers --forwarded-allow-ips='*'"
     depends_on:
@@ -77,6 +78,23 @@ services:
       retries: 3
     ports:
       - "8080:80"
+    restart: unless-stopped
+
+  web-app:
+    build:
+      context: ./web-app
+      args:
+        NPM_REGISTRY: ${NPM_REGISTRY:-https://registry.npmmirror.com}
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1/ || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    ports:
+      - "8081:80"
     restart: unless-stopped
 
 volumes:

@@ -32,3 +32,8 @@ scripts/downloads/
 # Database backups
 scripts/backups/
 pytest-of-*/
+
+# Participant web app
+web-app/node_modules/
+web-app/dist/
+web-app/.env.local

@@ -8,6 +8,12 @@
       "port": 5173
     },
     {
+      "name": "web-app",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["--prefix", "web-app", "run", "dev", "--", "--host", "127.0.0.1"],
+      "port": 5174
+    },
+    {
       "name": "backend-api",
       "url": "http://localhost:8000/docs"
     }
