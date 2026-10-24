@@ -1,21 +1,33 @@
 import logging
 import re
 from datetime import datetime
+from uuid import uuid4
 
 import httpx
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
 from app.core.errors import AppError
-from app.core.security import create_attendee_token
+from app.core.rate_limit import (
+    record_failure,
+    reset_attempts,
+    seconds_until_allowed,
+)
+from app.core.security import (
+    create_attendee_token,
+    hash_password,
+    verify_password,
+)
 from app.models.attendee import Attendee
 from app.schemas.mp import (
     AttendeeOut,
     MpLoginRequest,
     MpLoginResult,
     ProfileUpdate,
-    WebLoginRequest,
+    WebPasswordLoginRequest,
+    WebRegisterRequest,
 )
 
 logger = logging.getLogger(__name__)
@@ -23,6 +35,7 @@ logger = logging.getLogger(__name__)
 MOCK_PREFIX = "mock:"
 MOCK_NAME_RE = re.compile(r"^[A-Za-z0-9_-]{1,32}$")
 PHONE_RE = re.compile(r"^1[3-9]\d{9}$")
+USERNAME_RE = re.compile(r"^[A-Za-z0-9_]{3,32}$")
 
 
 class WechatError(AppError):
@@ -114,31 +127,81 @@ async def update_profile(
     return attendee
 
 
-async def web_login(
-    db: AsyncSession, payload: WebLoginRequest, ip: str | None = None
-) -> MpLoginResult:
-    """网页体验登录：手机号作为身份标识，仅用于演示。"""
-    nickname = payload.nickname.strip()
-    phone = payload.phone.strip()
-    if not nickname:
-        raise AppError(422, "昵称不能为空", 42200)
-    if not PHONE_RE.match(phone):
-        raise AppError(422, "请输入有效的手机号", 42210)
-
-    openid = f"web:{phone}"
-    attendee = await db.scalar(select(Attendee).where(Attendee.openid == openid))
-    if attendee is None:
-        attendee = Attendee(openid=openid, nickname=nickname, phone=phone)
-        db.add(attendee)
-    else:
-        attendee.nickname = nickname
-        attendee.phone = phone
-
-    attendee.last_login_at = datetime.now()
-    await db.commit()
-    await db.refresh(attendee)
-
+def _attendee_result(attendee: Attendee) -> MpLoginResult:
     return MpLoginResult(
         access_token=create_attendee_token(attendee.id),
         attendee=AttendeeOut.model_validate(attendee),
     )
+
+
+async def register(
+    db: AsyncSession, payload: WebRegisterRequest, ip: str | None = None
+) -> MpLoginResult:
+    username = payload.username.strip().lower()
+    if not USERNAME_RE.match(username):
+        raise AppError(422, "用户名需为 3-32 位字母、数字或下划线", 42211)
+
+    existing = await db.scalar(
+        select(Attendee).where(Attendee.username == username)
+    )
+    if existing is not None:
+        raise AppError(409, "用户名已被注册", 40930)
+
+    nickname = (payload.nickname or "").strip() or payload.username.strip()
+    phone = (payload.phone or "").strip() or None
+    if phone and not PHONE_RE.match(phone):
+        raise AppError(422, "请输入有效的手机号", 42210)
+
+    attendee = Attendee(
+        openid=f"web:{uuid4().hex}",
+        username=username,
+        password_hash=hash_password(payload.password),
+        nickname=nickname[:64],
+        phone=phone,
+    )
+    db.add(attendee)
+    try:
+        await db.commit()
+    except IntegrityError as exc:
+        await db.rollback()
+        raise AppError(409, "用户名已被注册", 40930) from exc
+
+    await db.refresh(attendee)
+    return _attendee_result(attendee)
+
+
+async def password_login(
+    db: AsyncSession,
+    payload: WebPasswordLoginRequest,
+    ip: str | None = None,
+) -> MpLoginResult:
+    username = payload.username.strip().lower()
+    key = f"attendee:{ip or 'unknown'}:{username}"
+    window_seconds = settings.login_window_minutes * 60
+
+    remaining = seconds_until_allowed(key, window_seconds)
+    if remaining > 0:
+        minutes = max(1, (remaining + 59) // 60)
+        raise AppError(429, f"登录失败次数过多，请 {minutes} 分钟后再试", 42902)
+
+    attendee = await db.scalar(
+        select(Attendee).where(Attendee.username == username)
+    )
+    if (
+        attendee is None
+        or not attendee.password_hash
+        or not verify_password(attendee.password_hash, payload.password)
+    ):
+        record_failure(
+            key,
+            settings.login_max_attempts,
+            window_seconds,
+            settings.login_lock_minutes * 60,
+        )
+        raise AppError(401, "用户名或密码错误", 40106)
+
+    reset_attempts(key)
+    attendee.last_login_at = datetime.now()
+    await db.commit()
+    await db.refresh(attendee)
+    return _attendee_result(attendee)

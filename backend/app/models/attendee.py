@@ -15,6 +15,10 @@ class Attendee(Base, TimestampMixin):
     openid: Mapped[str] = mapped_column(
         String(64), nullable=False, unique=True, index=True
     )
+    username: Mapped[str | None] = mapped_column(
+        String(64), nullable=True, unique=True, index=True
+    )
+    password_hash: Mapped[str | None] = mapped_column(String(255), nullable=True)
     unionid: Mapped[str | None] = mapped_column(String(64), nullable=True)
     nickname: Mapped[str] = mapped_column(
         String(64), nullable=False, default="", server_default=""

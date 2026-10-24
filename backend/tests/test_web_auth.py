@@ -1,20 +1,33 @@
-from app.core.config import settings
-from tests.conftest import mp_login
+import pytest
 
 
-async def web_login(client, nickname="网页用户", phone="13800138000"):
+async def register(
+    client,
+    username="webuser",
+    password="password123",
+    **extra,
+):
     return await client.post(
-        "/api/attendee/auth/login",
-        json={"nickname": nickname, "phone": phone},
+        "/api/attendee/auth/register",
+        json={"username": username, "password": password, **extra},
     )
 
 
-async def test_web_login_and_me(client):
-    response = await web_login(client)
+async def login(client, username="webuser", password="password123"):
+    return await client.post(
+        "/api/attendee/auth/login",
+        json={"username": username, "password": password},
+    )
+
+
+async def test_register_and_me(client):
+    response = await register(client, nickname="网页用户", phone="13800138000")
     assert response.status_code == 200, response.text
     data = response.json()["data"]
+    assert data["attendee"]["username"] == "webuser"
     assert data["attendee"]["nickname"] == "网页用户"
     assert data["attendee"]["phone"] == "13800138000"
+    assert "password_hash" not in response.text
 
     token = data["access_token"]
     me = await client.get(
@@ -22,42 +35,83 @@ async def test_web_login_and_me(client):
         headers={"Authorization": f"Bearer {token}"},
     )
     assert me.status_code == 200
-    assert me.json()["data"]["phone"] == "13800138000"
+    assert me.json()["data"]["username"] == "webuser"
 
-
-async def test_web_login_reuses_phone_and_updates_nickname(client):
-    first = await web_login(client, "用户A", "13800138000")
-    second = await web_login(client, "用户B", "13800138000")
-    assert first.status_code == 200
-    assert second.status_code == 200
+    # 用户名大小写不敏感
+    relogin = await login(client, username="WebUser")
+    assert relogin.status_code == 200
     assert (
-        first.json()["data"]["attendee"]["id"]
-        == second.json()["data"]["attendee"]["id"]
+        relogin.json()["data"]["attendee"]["id"]
+        == data["attendee"]["id"]
     )
-    assert second.json()["data"]["attendee"]["nickname"] == "用户B"
 
 
-async def test_web_login_rejects_invalid_phone(client):
-    response = await web_login(client, phone="12345678901")
-    assert response.status_code == 422
-    assert response.json()["code"] == 42210
+async def test_register_defaults_nickname_to_username(client):
+    response = await register(client, username="simple_user")
+    assert response.status_code == 200
+    assert response.json()["data"]["attendee"]["nickname"] == "simple_user"
 
 
-async def test_web_login_can_be_disabled(client, monkeypatch):
-    monkeypatch.setattr(settings, "web_demo_login", False)
-    response = await web_login(client)
-    assert response.status_code == 403
-    assert response.json()["code"] == 40300
+async def test_register_duplicate_username(client):
+    first = await register(client, username="duplicate")
+    assert first.status_code == 200
+
+    second = await register(client, username="DUPLICATE")
+    assert second.status_code == 409
+    assert second.json()["code"] == 40930
+
+
+async def test_register_validates_input(client):
+    short_username = await register(client, username="ab")
+    assert short_username.status_code == 422
+
+    short_password = await register(client, username="validuser", password="short")
+    assert short_password.status_code == 422
+
+    invalid_phone = await register(
+        client, username="phoneuser", phone="12345678901"
+    )
+    assert invalid_phone.status_code == 422
+    assert invalid_phone.json()["code"] == 42210
+
+
+async def test_login_wrong_password_and_rate_limit(client):
+    registered = await register(client, username="ratelimit")
+    assert registered.status_code == 200
+
+    for _ in range(5):
+        response = await login(client, username="ratelimit", password="wrong-pass")
+        assert response.status_code == 401
+        assert response.json()["code"] == 40106
+
+    blocked = await login(client, username="ratelimit")
+    assert blocked.status_code == 429
+    assert blocked.json()["code"] == 42902
+
+
+async def test_login_unknown_user(client):
+    response = await login(client, username="nobody", password="password123")
+    assert response.status_code == 401
+    assert response.json()["code"] == 40106
 
 
 async def test_web_token_can_access_attendee_apis(client):
-    response = await web_login(client)
-    token = response.json()["data"]["access_token"]
+    registered = await register(client, username="tokenuser")
+    token = registered.json()["data"]["access_token"]
     headers = {"Authorization": f"Bearer {token}"}
 
     registrations = await client.get("/api/mp/registrations", headers=headers)
     assert registrations.status_code == 200
     assert registrations.json()["data"]["total"] == 0
+
+    admin = await client.get("/api/admin/activities", headers=headers)
+    assert admin.status_code == 403
+
+
+async def test_profile_update(client):
+    registered = await register(client, username="profileuser")
+    token = registered.json()["data"]["access_token"]
+    headers = {"Authorization": f"Bearer {token}"}
 
     updated = await client.put(
         "/api/attendee/auth/profile",
@@ -67,16 +121,5 @@ async def test_web_token_can_access_attendee_apis(client):
     assert updated.status_code == 200
     assert updated.json()["data"]["nickname"] == "新昵称"
 
-
-async def test_mp_and_web_tokens_do_not_mix(client):
-    web = await web_login(client)
-    web_token = web.json()["data"]["access_token"]
-    response = await client.get(
-        "/api/admin/activities",
-        headers={"Authorization": f"Bearer {web_token}"},
-    )
-    assert response.status_code == 403
-
-    admin_like = await mp_login(client, "alice")
-    response = await client.get("/api/attendee/auth/me", headers=admin_like)
-    assert response.status_code == 200
+    me = await client.get("/api/attendee/auth/me", headers=headers)
+    assert me.json()["data"]["nickname"] == "新昵称"

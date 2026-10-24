@@ -10,15 +10,25 @@ class MpLoginRequest(BaseModel):
     code: str = Field(min_length=1, max_length=128)
 
 
-class WebLoginRequest(BaseModel):
-    nickname: str = Field(min_length=1, max_length=64)
-    phone: str = Field(min_length=11, max_length=20)
+class WebRegisterRequest(BaseModel):
+    username: str = Field(
+        min_length=3, max_length=32, pattern=r"^[A-Za-z0-9_]+$"
+    )
+    password: str = Field(min_length=8, max_length=128)
+    nickname: str | None = Field(default=None, max_length=64)
+    phone: str | None = Field(default=None, max_length=20)
+
+
+class WebPasswordLoginRequest(BaseModel):
+    username: str = Field(min_length=1, max_length=32)
+    password: str = Field(min_length=1, max_length=128)
 
 
 class AttendeeOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: int
+    username: str | None = None
     nickname: str
     avatar_url: str | None = None
     phone: str | None = None

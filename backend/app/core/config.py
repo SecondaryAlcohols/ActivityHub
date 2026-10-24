@@ -45,9 +45,6 @@ class Settings(BaseSettings):
     wechat_api_base: str = "https://api.weixin.qq.com"
     wechat_timeout_seconds: float = 5.0
 
-    # 网页参与者体验登录（演示用，正式环境应替换为真实账号体系）
-    web_demo_login: bool = True
-
     # 小程序用户 Token
     attendee_token_expire_days: int = 7
 
