@@ -109,12 +109,12 @@ onMounted(async () => {
       <div class="login-prompt">
         <div class="prompt-icon">签</div>
         <h1>登录后查看报名</h1>
-        <p>使用昵称和手机号体验登录，查看报名状态与电子票。</p>
+        <p>注册或登录账号，查看报名状态与电子票。</p>
         <router-link
           to="/login?redirect=/my"
           class="primary-btn prompt-btn"
         >
-          体验登录
+          登录 / 注册
         </router-link>
       </div>
     </template>
@@ -157,6 +157,9 @@ onMounted(async () => {
               </button>
             </div>
           </template>
+          <div class="profile-account" v-if="user?.username">
+            @{{ user.username }}
+          </div>
           <div class="profile-phone">{{ user?.phone || '未填写手机号' }}</div>
         </div>
       </section>
@@ -302,6 +305,12 @@ onMounted(async () => {
   background: rgba(255, 255, 255, 0.1);
   color: rgba(255, 255, 255, 0.8);
   font-size: 10px;
+}
+
+.profile-account {
+  margin-top: 4px;
+  color: rgba(255, 255, 255, 0.55);
+  font-size: 11px;
 }
 
 .profile-phone {

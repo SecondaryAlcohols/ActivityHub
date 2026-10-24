@@ -13,8 +13,17 @@ import type {
   Ticket,
 } from '@/types'
 
-export function webLogin(nickname: string, phone: string) {
-  return post<LoginResult>('/attendee/auth/login', { nickname, phone })
+export function login(username: string, password: string) {
+  return post<LoginResult>('/attendee/auth/login', { username, password })
+}
+
+export function register(payload: {
+  username: string
+  password: string
+  nickname?: string
+  phone?: string
+}) {
+  return post<LoginResult>('/attendee/auth/register', payload)
 }
 
 export function fetchMe() {

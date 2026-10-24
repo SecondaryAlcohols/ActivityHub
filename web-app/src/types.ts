@@ -1,5 +1,6 @@
 export interface Attendee {
   id: number
+  username: string | null
   nickname: string
   avatar_url: string | null
   phone: string | null

@@ -49,6 +49,12 @@ const router = createRouter({
       meta: { title: '登录' },
     },
     {
+      path: '/register',
+      name: 'register',
+      component: () => import('@/views/RegisterView.vue'),
+      meta: { title: '注册' },
+    },
+    {
       path: '/:pathMatch(.*)*',
       name: 'not-found',
       component: () => import('@/views/NotFoundView.vue'),
@@ -61,7 +67,7 @@ router.beforeEach((to) => {
   if (to.meta.requiresAuth && !token.value) {
     return { name: 'login', query: { redirect: to.fullPath } }
   }
-  if (to.name === 'login' && token.value) {
+  if ((to.name === 'login' || to.name === 'register') && token.value) {
     return { name: 'home' }
   }
   return true

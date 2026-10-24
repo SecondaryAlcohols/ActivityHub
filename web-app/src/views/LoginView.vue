@@ -2,32 +2,31 @@
 import { reactive, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
-import { webLogin } from '@/api/attendee'
+import { login } from '@/api/attendee'
 import { setSession } from '@/auth'
 import { toast } from '@/toast'
 
 const route = useRoute()
 const router = useRouter()
 
-const form = reactive({ nickname: '', phone: '' })
+const form = reactive({ username: '', password: '' })
 const loading = ref(false)
 
 async function submit() {
-  const nickname = form.nickname.trim()
-  const phone = form.phone.trim()
-  if (!nickname) {
-    toast('请输入昵称', 'info')
+  const username = form.username.trim()
+  if (!username) {
+    toast('请输入用户名', 'info')
     return
   }
-  if (!/^1[3-9]\d{9}$/.test(phone)) {
-    toast('请输入有效的手机号', 'info')
+  if (!form.password) {
+    toast('请输入密码', 'info')
     return
   }
   if (loading.value) return
 
   loading.value = true
   try {
-    const result = await webLogin(nickname, phone)
+    const result = await login(username, form.password)
     setSession(result)
     toast('登录成功', 'success')
     const redirect =
@@ -46,40 +45,41 @@ async function submit() {
 <template>
   <div class="page login-page">
     <section class="login-visual">
-      <div class="eyebrow">WELCOME</div>
-      <h1>报名一场<br />值得期待的活动</h1>
+      <div class="eyebrow">WELCOME BACK</div>
+      <h1>登录你的<br />活动账号</h1>
       <p>登录后即可报名、查看审核状态并出示电子票。</p>
       <div class="visual-tags">
-        <span>活动浏览</span>
         <span>在线报名</span>
+        <span>我的报名</span>
         <span>电子票</span>
       </div>
     </section>
 
     <section class="login-card">
-      <h2>体验登录</h2>
-      <p class="login-desc">输入昵称和手机号即可进入，无需密码。</p>
+      <h2>登录</h2>
+      <p class="login-desc">使用注册时的用户名和密码继续。</p>
 
       <form class="login-form" @submit.prevent="submit">
         <label class="form-item">
-          <span>昵称</span>
+          <span>用户名</span>
           <input
-            v-model="form.nickname"
+            v-model="form.username"
             class="input"
-            maxlength="64"
-            placeholder="怎么称呼你"
-            autocomplete="nickname"
+            maxlength="32"
+            placeholder="请输入用户名"
+            autocomplete="username"
           />
         </label>
         <label class="form-item">
-          <span>手机号</span>
+          <span>密码</span>
           <input
-            v-model="form.phone"
+            v-model="form.password"
             class="input"
-            type="tel"
-            maxlength="11"
-            placeholder="用于报名信息"
-            autocomplete="tel"
+            type="password"
+            maxlength="128"
+            placeholder="请输入密码"
+            autocomplete="current-password"
+            @keyup.enter="submit"
           />
         </label>
 
@@ -88,14 +88,21 @@ async function submit() {
           class="primary-btn login-btn"
           :disabled="loading"
         >
-          {{ loading ? '登录中…' : '进入活动广场' }}
+          {{ loading ? '登录中…' : '登录' }}
         </button>
       </form>
 
-      <p class="login-note">
-        这是演示用的体验登录，不验证手机号归属。正式使用时应接入微信授权或短信验证。
-      </p>
-      <router-link to="/" class="browse-link">先随便逛逛 →</router-link>
+      <div class="login-links">
+        <router-link
+          :to="{ name: 'register', query: route.query }"
+          class="text-link"
+        >
+          还没有账号？立即注册
+        </router-link>
+        <router-link to="/" class="text-link muted-link">
+          先随便逛逛 →
+        </router-link>
+      </div>
     </section>
   </div>
 </template>
@@ -213,17 +220,20 @@ async function submit() {
   margin-top: 4px;
 }
 
-.login-note {
-  margin: 18px 0 0;
-  color: #a0a7b4;
-  font-size: 11px;
-  line-height: 1.7;
+.login-links {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 18px;
 }
 
-.browse-link {
-  display: inline-block;
-  margin-top: 14px;
+.text-link {
   color: var(--primary);
   font-size: 12.5px;
+}
+
+.muted-link {
+  color: #9ca3af;
 }
 </style>
