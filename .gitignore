@@ -30,6 +30,12 @@ scripts/downloads/
 # Local app settings
 .claude/settings.local.json
 
+# Launcher runtime logs / build output
+logs/
+build/
+launcher/bin/
+launcher/obj/
+
 # Database backups
 scripts/backups/
 pytest-of-*/

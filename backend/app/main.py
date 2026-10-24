@@ -15,6 +15,7 @@ from app.core.config import settings
 from app.core.errors import register_exception_handlers
 from app.db import engine
 from app.schemas.common import ApiResponse
+from app.static_site import mount_frontends
 
 
 @asynccontextmanager
@@ -48,6 +49,9 @@ def create_app() -> FastAPI:
     @app.get("/api/health", response_model=ApiResponse[dict])
     async def health():
         return ApiResponse(data={"status": "ok"})
+
+    # 构建产物存在时由后端直接托管前端；开发模式仍可用 Vite。
+    mount_frontends(app)
 
     return app
 

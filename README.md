@@ -50,13 +50,51 @@
 │   ├── utils/               # 请求、登录、日期
 │   ├── config.js            # API 地址与 Mock 登录配置
 │   └── project.config.json
+├── launcher/                # 一键启动程序的 C# 源码
+├── logs/                    # 运行日志（首次启动后生成，已忽略）
+├── scripts/                 # Docker 包装、备份、打包脚本
 ├── docker-compose.yml
 └── 活动报名签到系统-规划.md
 ```
 
+## 一键启动（Windows）
+
+双击根目录的 `启动活动报名系统.exe` 即可：启动后端、托管已构建的前端，并打开管理后台。
+
+| 入口 | 地址 |
+| --- | --- |
+| 参与者页面 | http://127.0.0.1:8000/ |
+| 管理后台 | http://127.0.0.1:8000/admin/ |
+| 接口文档 | http://127.0.0.1:8000/docs |
+
+- 默认账号 `admin` / `admin12345`；首次启动会自动建库、建号，请尽快修改密码。
+- 日志写入根目录 `logs/`；按 Enter 或关闭窗口都会停止服务。
+- 前提：已安装 Python 3.12+ 且 `backend/.venv` 依赖就绪，前端已构建（见下方命令）。exe 本身依赖 .NET Framework 4.8（Windows 10/11 自带）。
+
+可选参数：
+
+| 参数 | 说明 |
+| --- | --- |
+| `--port 8080` | 指定端口，默认 8000 |
+| `--participant` | 打开参与者页面而不是管理后台 |
+| `--no-browser` | 不自动打开浏览器 |
+
+修改前端后需要重新构建，后端会直接读取 `dist`：
+
+```bash
+cd admin-web && npm.cmd run build
+cd web-app && npm.cmd run build
+```
+
+修改 `launcher/Program.cs` 后重新打包 exe：
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\build-launcher.ps1
+```
+
 ## 本地启动
 
-环境要求：Python 3.12+、Node.js 20+。本项目已在 Python 3.13、Node.js 24 下验证。
+以下为前后端分离的开发模式（热更新）。环境要求：Python 3.12+、Node.js 20+。本项目已在 Python 3.13、Node.js 24 下验证。
 
 ### 1. 启动后端
 
@@ -155,6 +193,7 @@ cd backend
 - Docker 部署：后端非 root 运行、服务健康检查、后端不直接暴露端口、Nginx 真实 IP 透传
 - GitHub Actions CI：后端迁移与测试、前端类型检查与构建
 - MySQL 备份脚本：`scripts/backup-mysql.cmd`
+- Windows 一键启动程序 `启动活动报名系统.exe`：自动建库建号、托管前端、写运行日志
 
 ## 尚未实现
 
