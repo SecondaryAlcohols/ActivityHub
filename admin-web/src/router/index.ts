@@ -32,6 +32,12 @@ const router = createRouter({
           component: () => import('@/views/ActivityEditView.vue'),
           meta: { title: '编辑活动' },
         },
+        {
+          path: 'activities/:id/registrations',
+          name: 'activity-registrations',
+          component: () => import('@/views/RegistrationListView.vue'),
+          meta: { title: '报名管理' },
+        },
       ],
     },
     {

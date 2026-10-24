@@ -17,6 +17,7 @@ const activeMenu = computed(() =>
 const pageTitle = computed(() => {
   if (route.name === 'activity-create') return '新建活动'
   if (route.name === 'activity-edit') return '编辑活动'
+  if (route.name === 'activity-registrations') return '报名管理'
   return '活动管理'
 })
 

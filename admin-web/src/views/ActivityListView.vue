@@ -230,7 +230,7 @@ onMounted(load)
           </template>
         </el-table-column>
 
-        <el-table-column label="操作" width="210" fixed="right">
+        <el-table-column label="操作" width="280" fixed="right">
           <template #default="{ row }">
             <div class="row-actions">
               <el-button
@@ -240,6 +240,14 @@ onMounted(load)
                 @click="router.push(`/activities/${row.id}/edit`)"
               >
                 编辑
+              </el-button>
+              <el-button
+                v-if="row.status !== 'draft'"
+                link
+                type="primary"
+                @click="router.push(`/activities/${row.id}/registrations`)"
+              >
+                报名
               </el-button>
               <el-button
                 v-if="row.status === 'draft'"
@@ -273,12 +281,6 @@ onMounted(load)
               >
                 删除
               </el-button>
-              <span
-                v-if="row.status === 'closed' || row.status === 'finished'"
-                class="muted"
-              >
-                —
-              </span>
             </div>
           </template>
         </el-table-column>
