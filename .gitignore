@@ -12,3 +12,6 @@ dist/
 build/
 .idea/
 *.log
+
+# WorkBuddy 项目元数据
+.workbuddy/
