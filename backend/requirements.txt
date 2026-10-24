@@ -9,3 +9,5 @@ pydantic-settings>=2.7,<3
 PyJWT>=2.10,<3
 argon2-cffi>=23.1
 cryptography>=43
+httpx>=0.28
+qrcode[pil]>=8.0

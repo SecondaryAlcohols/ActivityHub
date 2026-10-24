@@ -34,9 +34,22 @@ def create_access_token(admin_id: int, role: str) -> str:
     return jwt.encode(payload, settings.jwt_secret, algorithm=settings.jwt_algorithm)
 
 
-def decode_access_token(token: str) -> dict:
+def create_attendee_token(attendee_id: int) -> str:
+    expires_at = datetime.now(timezone.utc) + timedelta(
+        days=settings.attendee_token_expire_days
+    )
+    payload = {
+        "sub": str(attendee_id),
+        "type": "attendee",
+        "exp": expires_at,
+    }
+    return jwt.encode(payload, settings.jwt_secret, algorithm=settings.jwt_algorithm)
+
+
+def decode_token(token: str) -> dict:
+    """校验签名与有效期，返回原始载荷（不区分 Token 类型）。"""
     try:
-        payload = jwt.decode(
+        return jwt.decode(
             token,
             settings.jwt_secret,
             algorithms=[settings.jwt_algorithm],
@@ -46,6 +59,16 @@ def decode_access_token(token: str) -> dict:
     except jwt.InvalidTokenError as exc:
         raise AppError(401, "无效的登录凭证", 40102) from exc
 
+
+def decode_access_token(token: str) -> dict:
+    payload = decode_token(token)
     if payload.get("type") != "admin":
+        raise AppError(401, "无效的登录凭证", 40102)
+    return payload
+
+
+def decode_attendee_token(token: str) -> dict:
+    payload = decode_token(token)
+    if payload.get("type") != "attendee":
         raise AppError(401, "无效的登录凭证", 40102)
     return payload

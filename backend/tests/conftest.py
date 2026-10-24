@@ -5,6 +5,7 @@ import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
+from app.core.config import settings
 from app.core.rate_limit import reset_all_attempts
 from app.core.security import hash_password
 from app.db import get_db
@@ -17,6 +18,13 @@ def reset_login_limiter():
     reset_all_attempts()
     yield
     reset_all_attempts()
+
+
+@pytest.fixture(autouse=True)
+def enable_mock_wechat_login(monkeypatch):
+    monkeypatch.setattr(settings, "wechat_mock_login", True)
+    monkeypatch.setattr(settings, "debug", True)
+    yield
 
 
 @pytest_asyncio.fixture
@@ -65,6 +73,13 @@ async def auth_headers(client):
         json={"username": "admin", "password": "secret123"},
     )
     assert response.status_code == 200
+    token = response.json()["data"]["access_token"]
+    return {"Authorization": f"Bearer {token}"}
+
+
+async def mp_login(client: AsyncClient, name: str = "alice") -> dict[str, str]:
+    response = await client.post("/api/mp/auth/login", json={"code": f"mock:{name}"})
+    assert response.status_code == 200, response.text
     token = response.json()["data"]["access_token"]
     return {"Authorization": f"Bearer {token}"}
 

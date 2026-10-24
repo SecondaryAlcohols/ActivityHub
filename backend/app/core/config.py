@@ -6,11 +6,17 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 BASE_DIR = Path(__file__).resolve().parents[2]
 
 DEFAULT_JWT_SECRET = "dev-secret-change-me-please-use-32-bytes-min"
+DEFAULT_TICKET_SECRET = "dev-ticket-secret-change-me-please-use-32-bytes-min"
 INSECURE_JWT_SECRETS = {
     DEFAULT_JWT_SECRET,
     "change-me-in-production",
     "please-change-me-in-production-use-32-bytes-min",
     "change-me-to-a-random-string-at-least-32-bytes",
+}
+INSECURE_TICKET_SECRETS = {
+    DEFAULT_TICKET_SECRET,
+    "please-change-me-ticket-secret",
+    "change-me-ticket-secret",
 }
 
 
@@ -32,6 +38,19 @@ class Settings(BaseSettings):
         "http://127.0.0.1:5173",
     ]
 
+    # 微信小程序
+    wechat_appid: str = ""
+    wechat_secret: str = ""
+    wechat_mock_login: bool = False
+    wechat_api_base: str = "https://api.weixin.qq.com"
+    wechat_timeout_seconds: float = 5.0
+
+    # 小程序用户 Token
+    attendee_token_expire_days: int = 7
+
+    # 电子票签名，必须与 JWT 密钥分开
+    ticket_secret: str = DEFAULT_TICKET_SECRET
+
     model_config = SettingsConfigDict(
         env_file=BASE_DIR / ".env",
         env_file_encoding="utf-8",
@@ -48,6 +67,17 @@ class Settings(BaseSettings):
                 raise ValueError(
                     "生产环境必须通过环境变量设置至少 32 位的随机 JWT_SECRET"
                 )
+            if (
+                self.ticket_secret in INSECURE_TICKET_SECRETS
+                or len(self.ticket_secret) < 32
+            ):
+                raise ValueError(
+                    "生产环境必须通过环境变量设置至少 32 位的随机 TICKET_SECRET"
+                )
+            if self.wechat_mock_login:
+                raise ValueError("生产环境必须关闭 WECHAT_MOCK_LOGIN")
+        if self.wechat_mock_login and not self.debug:
+            raise ValueError("WECHAT_MOCK_LOGIN 只能在 DEBUG=true 时启用")
         return self
 
 

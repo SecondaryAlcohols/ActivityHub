@@ -234,7 +234,7 @@ async def test_signup_window_locked_after_registrations(
         headers=auth_headers,
     )
     assert response.status_code == 409
-    assert response.json()["code"] == 40910
+    assert response.json()["code"] == 40916
 
 
 async def test_update_allowed_when_locked_fields_unchanged(

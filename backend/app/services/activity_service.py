@@ -130,7 +130,7 @@ async def update_activity(
         if not _same_datetime(
             payload.signup_start_at, activity.signup_start_at
         ) or not _same_datetime(payload.signup_end_at, activity.signup_end_at):
-            raise AppError(409, "活动已有报名，报名时间不可修改", 40910)
+            raise AppError(409, "活动已有报名，报名时间不可修改", 40916)
 
     updates = payload.model_dump(exclude={"version"})
     for field, value in updates.items():
