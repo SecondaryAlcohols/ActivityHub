@@ -43,7 +43,6 @@ services:
       WECHAT_APPID: ${WECHAT_APPID:-}
       WECHAT_SECRET: ${WECHAT_SECRET:-}
       WECHAT_MOCK_LOGIN: "false"
-      WEB_DEMO_LOGIN: ${WEB_DEMO_LOGIN:-true}
       CORS_ORIGINS: '["http://localhost:8080"]'
     command: sh -c "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000 --proxy-headers --forwarded-allow-ips='*'"
     depends_on:
