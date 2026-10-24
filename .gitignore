@@ -31,3 +31,4 @@ scripts/downloads/
 
 # Database backups
 scripts/backups/
+pytest-of-*/

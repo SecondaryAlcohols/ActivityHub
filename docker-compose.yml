@@ -37,7 +37,12 @@ services:
       DEBUG: "false"
       DATABASE_URL: mysql+aiomysql://event:${MYSQL_PASSWORD:-eventpass}@mysql:3306/event_system?charset=utf8mb4
       JWT_SECRET: ${JWT_SECRET:-change-me-in-production}
+      TICKET_SECRET: ${TICKET_SECRET:-change-me-ticket-secret}
       ACCESS_TOKEN_EXPIRE_MINUTES: 480
+      ATTENDEE_TOKEN_EXPIRE_DAYS: 7
+      WECHAT_APPID: ${WECHAT_APPID:-}
+      WECHAT_SECRET: ${WECHAT_SECRET:-}
+      WECHAT_MOCK_LOGIN: "false"
       CORS_ORIGINS: '["http://localhost:8080"]'
     command: sh -c "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000 --proxy-headers --forwarded-allow-ips='*'"
     depends_on:
