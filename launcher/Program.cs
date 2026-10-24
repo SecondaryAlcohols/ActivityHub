@@ -14,6 +14,8 @@ namespace EventSystemLauncher
         private static bool _noBrowser;
         private static bool _participant;
         private static IntPtr _job = IntPtr.Zero;
+        private static string _launcherLog;
+        private static readonly object LogLock = new object();
 
         private static int Main(string[] args)
         {
@@ -27,33 +29,56 @@ namespace EventSystemLauncher
             if (root == null)
             {
                 Fail("找不到项目目录：请把本程序放在项目根目录（与 backend、admin-web 同级）后再运行。");
+                Pause();
                 return 2;
             }
+
+            Directory.CreateDirectory(Path.Combine(root, "logs"));
+            _launcherLog = Path.Combine(root, "logs", "launcher.log");
+            Log("=== 启动 launcher ===");
+            Log("exe=" + Process.GetCurrentProcess().MainModule.FileName);
+            Log("root=" + root);
 
             string backendDir = Path.Combine(root, "backend");
             string python = LocatePython(root);
             if (python == null)
             {
                 Fail(@"找不到 Python：请确认 backend\.venv\Scripts\python.exe 存在，或已安装 Python 3.12+。");
+                Log("找不到 python");
+                Pause();
                 return 3;
             }
-
-            string baseUrl = "http://127.0.0.1:" + _port;
-            string logDir = Path.Combine(root, "logs");
-            Directory.CreateDirectory(logDir);
-            string logPath = Path.Combine(logDir, "server-" + DateTime.Now.ToString("yyyyMMdd-HHmmss") + ".log");
+            Log("python=" + python);
 
             Console.WriteLine();
             Console.WriteLine("  活动报名与签到管理系统");
             Console.WriteLine("  ------------------------");
 
-            if (IsHealthy(baseUrl))
+            bool alreadyRunning;
+            bool skipped;
+            int port = ResolvePort(_port, out alreadyRunning, out skipped);
+            if (port <= 0)
+            {
+                Fail("需要用的端口都被占用了，请先关闭占用端口的程序再试。");
+                Pause();
+                return 7;
+            }
+            string baseUrl = "http://127.0.0.1:" + port;
+            Log("port=" + port + " alreadyRunning=" + alreadyRunning);
+
+            if (alreadyRunning)
             {
                 Console.WriteLine("  服务已在运行：" + baseUrl);
                 OpenBrowser(baseUrl + "/admin/");
                 Console.WriteLine("  按任意键关闭本窗口（不会停止已在运行的服务）。");
-                Console.ReadKey(true);
+                Pause();
                 return 0;
+            }
+
+            if (skipped)
+            {
+                Console.WriteLine("  [提示] 端口 " + _port + " 上有一个旧服务，已改用 " + port + "。");
+                Console.WriteLine("         如需使用 " + _port + "，请先关闭占用它的程序。");
             }
 
             if (!File.Exists(Path.Combine(root, "web-app", "dist", "index.html")))
@@ -65,16 +90,19 @@ namespace EventSystemLauncher
             if (!File.Exists(Path.Combine(backendDir, "event_system.db")))
             {
                 Console.WriteLine("  首次启动，正在初始化数据库与演示账号...");
-                if (RunCaptured(python, "-m alembic upgrade head", backendDir, logPath) != 0)
+                if (RunCaptured(python, "-m alembic upgrade head", backendDir, _launcherLog) != 0)
                 {
-                    Fail("数据库迁移失败，详见日志：" + logPath);
+                    Fail("数据库迁移失败，详见日志：" + _launcherLog);
+                    Pause();
                     return 4;
                 }
-                RunCaptured(python, "scripts/create_admin.py --username admin --password admin12345 --name 系统管理员", backendDir, logPath);
+                RunCaptured(python, "scripts/create_admin.py --username admin --password admin12345 --name 系统管理员", backendDir, _launcherLog);
             }
 
-            Process server = StartServer(python, backendDir, logPath);
-            Console.WriteLine("  正在启动服务（端口 " + _port + "）...");
+            string serverLog = Path.Combine(root, "logs", "server-" + DateTime.Now.ToString("yyyyMMdd-HHmmss") + ".log");
+            Process server = StartServer(python, port, backendDir, serverLog);
+            Log("server pid=" + server.Id + " log=" + serverLog);
+            Console.WriteLine("  正在启动服务（端口 " + port + "）...");
 
             DateTime deadline = DateTime.UtcNow.AddSeconds(60);
             bool ready = false;
@@ -82,9 +110,10 @@ namespace EventSystemLauncher
             {
                 if (server.HasExited)
                 {
-                    Fail("服务启动失败（退出码 " + server.ExitCode + "），详见日志：" + logPath);
-                    Console.WriteLine("  按任意键退出。");
-                    Console.ReadKey(true);
+                    Fail("服务启动失败（退出码 " + server.ExitCode + "），日志末尾：");
+                    PrintTail(serverLog, 12);
+                    Log("server exited early code=" + server.ExitCode);
+                    Pause();
                     return 5;
                 }
                 if (IsHealthy(baseUrl))
@@ -97,18 +126,19 @@ namespace EventSystemLauncher
 
             if (!ready)
             {
-                Fail("服务在 60 秒内没有就绪，详见日志：" + logPath);
+                Fail("服务在 60 秒内没有就绪，日志末尾：");
+                PrintTail(serverLog, 12);
                 TryKill(server);
-                Console.WriteLine("  按任意键退出。");
-                Console.ReadKey(true);
+                Pause();
                 return 6;
             }
 
+            Log("ready on " + baseUrl);
             Console.WriteLine();
             Console.WriteLine("  参与者页面  " + baseUrl + "/");
             Console.WriteLine("  管理后台    " + baseUrl + "/admin/");
             Console.WriteLine("  默认账号    admin / admin12345（首次启动创建，请尽快修改）");
-            Console.WriteLine("  运行日志    " + logPath);
+            Console.WriteLine("  运行日志    " + serverLog);
             Console.WriteLine();
             Console.WriteLine("  按 Enter 停止服务并退出；直接关闭窗口也会停止服务。");
 
@@ -126,7 +156,6 @@ namespace EventSystemLauncher
 
             if (Console.IsInputRedirected)
             {
-                // 无交互控制台（后台运行）时保持服务，直到进程被结束。
                 Thread.Sleep(Timeout.Infinite);
             }
             else
@@ -134,6 +163,7 @@ namespace EventSystemLauncher
                 Console.ReadLine();
             }
             TryKill(server);
+            Log("=== 正常退出 ===");
             return 0;
         }
 
@@ -159,6 +189,64 @@ namespace EventSystemLauncher
                         break;
                 }
             }
+        }
+
+        // 返回可用的端口；alreadyRunning 为 true 表示这个端口上已经是本项目（含前端）。
+        private static int ResolvePort(int wanted, out bool alreadyRunning, out bool skipped)
+        {
+            alreadyRunning = false;
+            skipped = false;
+            string mode = Probe(wanted);
+            Log("probe " + wanted + " => " + mode);
+
+            if (mode == "ours")
+            {
+                alreadyRunning = true;
+                return wanted;
+            }
+
+            if (mode == "foreign")
+            {
+                skipped = true;
+                for (int p = wanted + 1; p <= wanted + 10; p++)
+                {
+                    string probe = Probe(p);
+                    Log("probe " + p + " => " + probe);
+                    if (probe == "ours")
+                    {
+                        alreadyRunning = true;
+                        return p;
+                    }
+                    if (probe == "free") return p;
+                }
+                return -1;
+            }
+
+            return wanted;
+        }
+
+        // free：没有服务；ours：本项目（/admin/ 返回页面）；foreign：占用但不是本项目。
+        private static string Probe(int port)
+        {
+            string baseUrl = "http://127.0.0.1:" + port;
+            if (!IsHealthy(baseUrl)) return "free";
+            try
+            {
+                WebRequest request = WebRequest.Create(baseUrl + "/admin/");
+                request.Timeout = 2500;
+                using (WebResponse response = request.GetResponse())
+                using (StreamReader reader = new StreamReader(response.GetResponseStream(), Encoding.UTF8))
+                {
+                    string html = reader.ReadToEnd();
+                    if (html.IndexOf("<!doctype", StringComparison.OrdinalIgnoreCase) >= 0
+                        || html.IndexOf("<html", StringComparison.OrdinalIgnoreCase) >= 0)
+                    {
+                        return "ours";
+                    }
+                }
+            }
+            catch { }
+            return "foreign";
         }
 
         private static string FindRepoRoot()
@@ -212,11 +300,11 @@ namespace EventSystemLauncher
             }
         }
 
-        private static Process StartServer(string python, string workingDir, string logPath)
+        private static Process StartServer(string python, int port, string workingDir, string logPath)
         {
             ProcessStartInfo info = new ProcessStartInfo();
             info.FileName = python;
-            info.Arguments = "-m uvicorn app.main:app --host 127.0.0.1 --port " + _port;
+            info.Arguments = "-m uvicorn app.main:app --host 127.0.0.1 --port " + port;
             info.WorkingDirectory = workingDir;
             info.UseShellExecute = false;
             info.CreateNoWindow = true;
@@ -235,8 +323,6 @@ namespace EventSystemLauncher
             return process;
         }
 
-        private static readonly object LogLock = new object();
-
         private static void AppendLog(string logPath, string line)
         {
             if (line == null) return;
@@ -245,6 +331,33 @@ namespace EventSystemLauncher
                 try { File.AppendAllText(logPath, line + Environment.NewLine, Encoding.UTF8); }
                 catch { }
             }
+        }
+
+        private static void Log(string message)
+        {
+            if (_launcherLog == null) return;
+            lock (LogLock)
+            {
+                try
+                {
+                    File.AppendAllText(_launcherLog,
+                        DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss") + "  " + message + Environment.NewLine,
+                        Encoding.UTF8);
+                }
+                catch { }
+            }
+        }
+
+        private static void PrintTail(string path, int lines)
+        {
+            try
+            {
+                if (!File.Exists(path)) { Console.WriteLine("  （暂无日志）"); return; }
+                string[] all = File.ReadAllLines(path);
+                int start = Math.Max(0, all.Length - lines);
+                for (int i = start; i < all.Length; i++) Console.WriteLine("  " + all[i]);
+            }
+            catch { }
         }
 
         private static int RunCaptured(string fileName, string arguments, string workingDir, string logPath)
@@ -296,6 +409,14 @@ namespace EventSystemLauncher
             {
                 Console.WriteLine("  无法自动打开浏览器，请手动访问：" + url);
             }
+        }
+
+        private static void Pause()
+        {
+            if (Console.IsInputRedirected) return;
+            Console.WriteLine();
+            Console.WriteLine("  按任意键关闭窗口。");
+            try { Console.ReadKey(true); } catch { }
         }
 
         private static void Fail(string message)
