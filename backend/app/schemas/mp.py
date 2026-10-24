@@ -10,6 +10,11 @@ class MpLoginRequest(BaseModel):
     code: str = Field(min_length=1, max_length=128)
 
 
+class WebLoginRequest(BaseModel):
+    nickname: str = Field(min_length=1, max_length=64)
+    phone: str = Field(min_length=11, max_length=20)
+
+
 class AttendeeOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 

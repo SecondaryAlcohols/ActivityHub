@@ -10,12 +10,19 @@ from app.core.config import settings
 from app.core.errors import AppError
 from app.core.security import create_attendee_token
 from app.models.attendee import Attendee
-from app.schemas.mp import AttendeeOut, MpLoginRequest, MpLoginResult, ProfileUpdate
+from app.schemas.mp import (
+    AttendeeOut,
+    MpLoginRequest,
+    MpLoginResult,
+    ProfileUpdate,
+    WebLoginRequest,
+)
 
 logger = logging.getLogger(__name__)
 
 MOCK_PREFIX = "mock:"
 MOCK_NAME_RE = re.compile(r"^[A-Za-z0-9_-]{1,32}$")
+PHONE_RE = re.compile(r"^1[3-9]\d{9}$")
 
 
 class WechatError(AppError):
@@ -105,3 +112,33 @@ async def update_profile(
     await db.commit()
     await db.refresh(attendee)
     return attendee
+
+
+async def web_login(
+    db: AsyncSession, payload: WebLoginRequest, ip: str | None = None
+) -> MpLoginResult:
+    """网页体验登录：手机号作为身份标识，仅用于演示。"""
+    nickname = payload.nickname.strip()
+    phone = payload.phone.strip()
+    if not nickname:
+        raise AppError(422, "昵称不能为空", 42200)
+    if not PHONE_RE.match(phone):
+        raise AppError(422, "请输入有效的手机号", 42210)
+
+    openid = f"web:{phone}"
+    attendee = await db.scalar(select(Attendee).where(Attendee.openid == openid))
+    if attendee is None:
+        attendee = Attendee(openid=openid, nickname=nickname, phone=phone)
+        db.add(attendee)
+    else:
+        attendee.nickname = nickname
+        attendee.phone = phone
+
+    attendee.last_login_at = datetime.now()
+    await db.commit()
+    await db.refresh(attendee)
+
+    return MpLoginResult(
+        access_token=create_attendee_token(attendee.id),
+        attendee=AttendeeOut.model_validate(attendee),
+    )
